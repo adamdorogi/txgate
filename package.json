@@ -1,0 +1,12 @@
+{
+  "name": "txgate",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Watch-only payment daemon",
+  "scripts": {
+    "build": "tsc --project tsconfig.json"
+  },
+  "devDependencies": {
+    "typescript": "~4.5.5"
+  }
+}
