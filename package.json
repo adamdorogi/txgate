@@ -10,10 +10,13 @@
   "devDependencies": {
     "typescript": "~4.5.5",
     "ts-node": "10.5.0",
-    "@types/node": "16.11.25"
+    "@types/node": "16.11.26"
   },
   "dependencies": {
     "knex": "1.0.3",
-    "pg": "8.7.3"
+    "pg": "8.7.3",
+    "@emurgo/cardano-serialization-lib-nodejs": "10.0.4",
+    "blakejs": "1.1.1",
+    "bech32": "2.0.0"
   }
 }
