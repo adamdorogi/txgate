@@ -5,12 +5,18 @@
   "description": "Watch-only payment daemon",
   "scripts": {
     "build": "tsc --project tsconfig.json",
-    "migrate": "knex --knexfile knexfile.ts migrate:latest"
+    "migrate": "knex --knexfile knexfile.ts migrate:latest",
+    "test": "ts-mocha --timeout 10000 \"test/*.test.ts\""
   },
   "devDependencies": {
     "typescript": "~4.5.5",
     "ts-node": "10.5.0",
-    "@types/node": "16.11.26"
+    "@types/node": "16.11.26",
+    "mocha": "9.2.1",
+    "chai": "4.3.6",
+    "ts-mocha": "9.0.0",
+    "@types/mocha": "9.1.0",
+    "@types/chai": "4.3.0"
   },
   "dependencies": {
     "knex": "1.0.3",
