@@ -14,4 +14,13 @@ describe('Cardano account addresses', () => {
   it('encodes the enterprise credential on mainnet from a hex account key', () => {
     expect(deriveAddress(account, 0, 1)).to.equal('addr1v92fg770ddmqxxduasjsas39l5wwvwa04nj8ud95fde7f7g8cva4f');
   });
+
+  it('matches the cardano-address CLI delegated payment vector', () => {
+    expect(deriveAddress(account, 0, 0, stake)).to.equal('addr_test1qp2fg770ddmqxxduasjsas39l5wwvwa04nj8ud95fde7f70k6tew7wrnx0s4465nx05ajz890g44z0kx6a3gsnms4c4qq8ve0n');
+  });
+
+  it('keeps indexes distinct and rejects hardened indexes', () => {
+    expect(deriveAddress(account, 1, 0)).to.not.equal(deriveAddress(account, 0, 0));
+    expect(() => deriveAddress(account, 2 ** 31, 0)).to.throw('unhardened');
+  });
 });
