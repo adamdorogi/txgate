@@ -27,6 +27,7 @@ create table tx_out (
   value numeric(20, 0) not null check (value between 0 and 18446744073709551615),
   unique (tx_id, "index")
 );
+create index on tx_out (address);
 
 create table multi_asset (
   id bigserial primary key,
