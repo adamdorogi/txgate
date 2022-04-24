@@ -23,4 +23,14 @@ describe('invoice confirmation and expiry', () => {
     expect(state([], 10, 'REORGED')).to.deep.equal({ status: 'REORGED', paid: 0n, confirmations: 0 });
     expect(state([{ ...first, amount: 100n }], 12, 'REORGED').status).to.equal('SETTLED');
   });
+
+  it('uses block time for late payment and respects earlier valid funds', () => {
+    expect(state([], 10, 'NEW', after).status).to.equal('EXPIRED');
+    expect(state([first, { ...remainder, time: after }], 13).status).to.equal('LATE_PAYMENT');
+    expect(state([{ ...first, amount: 100n }, { ...remainder, time: after }], 13).status).to.equal('OVERPAID');
+  });
+
+  it('allows on-time payments processed after the expiry clock', () => {
+    expect(state([{ ...first, amount: 100n }], 12, 'NEW', after).status).to.equal('SETTLED');
+  });
 });
