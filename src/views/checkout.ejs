@@ -1,0 +1,28 @@
+<%- include("partials/head") %>
+<main class="container py-5">
+  <article class="card checkout-card mx-auto"
+    data-checkout data-status-url="/v1/public/invoices/<%= invoice.id %>/status"
+    data-expires-at="<%= invoice.expiresAt %>" data-payable="<%= status.payable %>">
+    <div class="card-body p-4">
+      <h1 class="h4 mb-1 text-center"><%= amount %> <%= invoice.assetSymbol %></h1>
+      <p class="text-muted text-center mb-3"><%= invoice.chain %></p>
+      <p class="text-center mb-3" aria-live="polite">
+        <span id="payment-status" class="badge <%= status.badge %>"><%= status.message %></span>
+      </p>
+      <p class="small text-center text-muted" id="payment-refresh-error" hidden>Status refresh failed. Retrying.</p>
+      <div id="payment-details" <%= status.payable ? "" : "hidden" %>>
+        <div class="payment-qr text-center mb-3" role="img" aria-label="Deposit address QR code"><%- qr %></div>
+        <label class="form-label" for="payment-address">Deposit address</label>
+        <div class="input-group input-group-sm mb-3">
+          <input class="form-control font-monospace" id="payment-address" value="<%= invoice.address %>" readonly>
+          <button class="btn btn-outline-secondary" id="copy-address" type="button">Copy</button>
+        </div>
+        <p class="mb-0 small text-muted">Expires <time datetime="<%= invoice.expiresAt %>"><%= formatTime(invoice.expiresAt) %></time>
+          <span class="font-monospace fw-bold ms-1" id="payment-countdown" aria-hidden="true"></span>
+        </p>
+      </div>
+    </div>
+  </article>
+</main>
+<script src="/assets/checkout.js" defer></script>
+<%- include("partials/footer") %>
