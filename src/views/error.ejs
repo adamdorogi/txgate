@@ -1,0 +1,8 @@
+<%- include("partials/head") %>
+<%- include("partials/nav") %>
+<main class="container py-4">
+  <h1 class="h4">HTTP <%= status %></h1>
+  <p><%= message %></p>
+  <% if (authenticated) { %><a href="/admin/invoices">Return to invoices</a><% } %>
+</main>
+<%- include("partials/footer") %>

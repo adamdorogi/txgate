@@ -1,0 +1,16 @@
+<nav class="navbar navbar-light bg-white border-bottom" aria-label="Merchant console">
+  <div class="container">
+    <a class="navbar-brand" href="/admin">txgate</a>
+    <% if (authenticated) { %>
+      <div class="d-flex align-items-center flex-wrap gap-3">
+        <a class="link-dark" href="/admin/invoices">Invoices</a>
+        <a class="link-dark" href="/admin/sweeps">Sweeps</a>
+        <a class="link-dark" href="/admin/chains">Chains</a>
+        <form method="post" action="/admin/logout">
+          <input type="hidden" name="csrf" value="<%= csrf %>">
+          <button class="btn btn-sm btn-outline-secondary" type="submit">Sign out</button>
+        </form>
+      </div>
+    <% } %>
+  </div>
+</nav>
