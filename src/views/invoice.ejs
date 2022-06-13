@@ -1,0 +1,97 @@
+<%- include("partials/head") %>
+<%- include("partials/nav") %>
+<main class="container py-4">
+  <div class="d-flex flex-wrap gap-2 justify-content-between align-items-start mb-3">
+    <div>
+      <h1 class="h3 mb-1">Invoice</h1>
+      <code class="text-dark address"><%= invoice.id %></code>
+    </div>
+    <a class="btn btn-sm btn-outline-primary" href="/pay/<%= invoice.id %>">View checkout</a>
+  </div>
+  <% if (resend) { %><p class="alert alert-success" role="status">Webhook delivery queued.</p><% } %>
+  <dl class="row border rounded bg-white mx-0 p-3">
+    <dt class="col-sm-3">Chain</dt><dd class="col-sm-9"><%= invoice.chain %></dd>
+    <dt class="col-sm-3">Deposit address</dt><dd class="col-sm-9"><code class="text-dark address"><%= invoice.address %></code></dd>
+    <dt class="col-sm-3">Amount</dt><dd class="col-sm-9"><%= formatAmount(invoice.amount, invoice.decimals) %> <%= invoice.assetSymbol %></dd>
+    <dt class="col-sm-3">Paid</dt><dd class="col-sm-9"><%= formatAmount(invoice.paid, invoice.decimals) %> <%= invoice.assetSymbol %></dd>
+    <% if (invoice.remaining !== "0") { %>
+      <dt class="col-sm-3">Remaining</dt><dd class="col-sm-9"><%= formatAmount(invoice.remaining, invoice.decimals) %> <%= invoice.assetSymbol %></dd>
+    <% } %>
+    <% if (invoice.excess !== "0") { %>
+      <dt class="col-sm-3">Excess</dt><dd class="col-sm-9"><%= formatAmount(invoice.excess, invoice.decimals) %> <%= invoice.assetSymbol %></dd>
+    <% } %>
+    <dt class="col-sm-3">Status</dt><dd class="col-sm-9"><span class="badge <%= badgeClass(invoice.status) %>"><%= invoice.status %></span></dd>
+    <dt class="col-sm-3">Depth</dt><dd class="col-sm-9"><%= invoice.confirmations %> / <%= invoice.targetConfirmations %> blocks</dd>
+    <dt class="col-sm-3">Created</dt><dd class="col-sm-9"><%= formatTime(invoice.createdAt) %></dd>
+    <dt class="col-sm-3">Expiry</dt><dd class="col-sm-9"><%= formatTime(invoice.expiresAt) %></dd>
+    <% if (invoice.sku) { %><dt class="col-sm-3">Reservation SKU</dt><dd class="col-sm-9"><%= invoice.sku %></dd><% } %>
+  </dl>
+
+  <h2 class="h5 mt-4">Transfers</h2>
+  <div class="table-responsive">
+    <table class="table table-sm table-striped table-bordered align-middle bg-white">
+      <thead><tr><th scope="col">Transfer</th><th scope="col">Block</th><th scope="col">Amount</th><th scope="col">Chain status</th><th scope="col">Time</th></tr></thead>
+      <tbody>
+        <% for (const transfer of transfers) { %>
+          <tr>
+            <td><code class="text-dark tx-hash"><%= transfer.txId %>#<%= transfer.outputIndex %></code></td>
+            <td><%= transfer.blockHeight %> <code class="text-dark tx-hash"><%= transfer.blockHash %></code></td>
+            <td><%= formatAmount(transfer.amount, invoice.decimals) %> <%= invoice.assetSymbol %></td>
+            <td><%= transfer.orphaned ? "Orphaned" : "Canonical" %></td>
+            <td class="status-cell"><%= formatTime(transfer.time) %></td>
+          </tr>
+        <% } %>
+        <% if (!transfers.length) { %><tr><td colspan="5" class="text-muted">No transfers recorded.</td></tr><% } %>
+      </tbody>
+    </table>
+  </div>
+
+  <h2 class="h5 mt-4">Confirmation history</h2>
+  <div class="table-responsive">
+    <table class="table table-sm table-striped table-bordered align-middle bg-white">
+      <thead><tr><th scope="col">Time</th><th scope="col">Status</th><th scope="col">Depth</th></tr></thead>
+      <tbody>
+        <% for (const event of events) { %>
+          <tr><td><%= formatTime(event.at) %></td><td><span class="badge <%= badgeClass(event.status) %>"><%= event.status %></span></td>
+            <td><%= event.confirmations %> / <%= invoice.targetConfirmations %> blocks</td></tr>
+        <% } %>
+        <% if (!events.length) { %><tr><td colspan="3" class="text-muted">No status changes recorded.</td></tr><% } %>
+      </tbody>
+    </table>
+  </div>
+
+  <h2 class="h5 mt-4">Webhook delivery log</h2>
+  <div class="table-responsive">
+    <table class="table table-sm table-striped table-bordered align-middle bg-white">
+      <thead><tr><th scope="col">Event</th><th scope="col">Attempts</th><th scope="col">Delivery</th><th scope="col">Details</th><th scope="col">Action</th></tr></thead>
+      <tbody>
+        <% for (const delivery of webhooks) { %>
+          <tr>
+            <td><code class="text-dark"><%= delivery.event %></code></td>
+            <td><%= delivery.attempts %></td>
+            <td><%= delivery.deliveredAt ? formatTime(delivery.deliveredAt) : delivery.attempts >= 9 ? "Stopped" : "Pending" %>
+              <% if (!delivery.deliveredAt && delivery.nextAttemptAt && delivery.attempts < 9) { %>
+                <div class="small text-muted">Next attempt <%= formatTime(delivery.nextAttemptAt) %></div>
+              <% } %>
+            </td>
+            <td>
+              <details>
+                <summary>View payload</summary>
+                <pre class="json-data mb-1"><%= prettyJson(delivery.payload) %></pre>
+                <% if (delivery.lastError) { %><p class="mb-0 small text-danger"><%= delivery.lastError %></p><% } %>
+              </details>
+            </td>
+            <td>
+              <form method="post" action="/admin/invoices/<%= invoice.id %>/webhooks/<%= delivery.id %>/resend">
+                <input type="hidden" name="csrf" value="<%= csrf %>">
+                <button class="btn btn-sm btn-outline-secondary" type="submit">Resend webhook</button>
+              </form>
+            </td>
+          </tr>
+        <% } %>
+        <% if (!webhooks.length) { %><tr><td colspan="5" class="text-muted">No webhook deliveries recorded.</td></tr><% } %>
+      </tbody>
+    </table>
+  </div>
+</main>
+<%- include("partials/footer") %>

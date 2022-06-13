@@ -1,0 +1,48 @@
+<%- include("partials/head") %>
+<%- include("partials/nav") %>
+<main class="container py-4">
+  <div class="d-flex align-items-start justify-content-between mb-3">
+    <h1 class="h3">Chains</h1>
+    <a class="btn btn-sm btn-outline-secondary" href="/admin/chains">Refresh</a>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-sm table-striped table-bordered align-middle bg-white">
+      <thead><tr><th scope="col">Chain</th><th scope="col">Synced block</th><th scope="col">Tip hash</th><th scope="col">Lag</th></tr></thead>
+      <tbody>
+        <% for (const chain of chains) { %>
+          <tr>
+            <td><%= chain.chain %></td>
+            <td><%= chain.tip ?? "Waiting for first poll" %></td>
+            <td><code class="text-dark tx-hash"><%= chain.hash ?? "" %></code></td>
+            <td><%= chain.lagSeconds === null ? "Unknown" : `${chain.lagSeconds} s` %></td>
+          </tr>
+        <% } %>
+        <% if (!chains.length) { %><tr><td colspan="4" class="text-muted">No chains configured.</td></tr><% } %>
+      </tbody>
+    </table>
+  </div>
+
+  <h2 class="h5 mt-4">Recent reorganizations</h2>
+  <div class="table-responsive">
+    <table class="table table-sm table-striped table-bordered align-middle bg-white">
+      <thead><tr><th scope="col">Chain</th><th scope="col">Previous tip</th><th scope="col">Common ancestor</th><th scope="col">Time</th></tr></thead>
+      <tbody>
+        <% for (const chain of chains) { %>
+          <% for (const reorg of chain.reorgs) { %>
+            <tr><td><%= chain.chain %></td><td><%= reorg.from %></td><td><%= reorg.to %></td><td><%= formatTime(reorg.at) %></td></tr>
+          <% } %>
+        <% } %>
+        <% if (!chains.some((chain) => chain.reorgs.length)) { %><tr><td colspan="4" class="text-muted">No recent reorganizations.</td></tr><% } %>
+      </tbody>
+    </table>
+  </div>
+
+  <h2 class="h5 mt-4">Merchant settings</h2>
+  <dl class="row border rounded bg-white mx-0 p-3">
+    <% for (const [name, value] of Object.entries(merchantSettings)) { %>
+      <dt class="col-md-4"><%= name %></dt>
+      <dd class="col-md-8"><code class="text-dark address"><%= value %></code></dd>
+    <% } %>
+  </dl>
+</main>
+<%- include("partials/footer") %>
