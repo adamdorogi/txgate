@@ -1,0 +1,65 @@
+<%- include("partials/head") %>
+<%- include("partials/nav") %>
+<main class="container py-4">
+  <h1 class="h3 mb-3">Sweeps</h1>
+  <form method="get" action="/admin/sweeps" class="row g-2 align-items-end mb-3">
+    <div class="col-sm-3">
+      <label class="form-label" for="chain">Chain</label>
+      <select class="form-select form-select-sm" name="chain" id="chain">
+        <% for (const option of chains) { %>
+          <option value="<%= option %>" <%= option === chain ? "selected" : "" %>><%= option %></option>
+        <% } %>
+      </select>
+    </div>
+    <div class="col-sm-3">
+      <label class="form-label" for="mode">Transaction type</label>
+      <select class="form-select form-select-sm" name="mode" id="mode">
+        <option value="settlement" <%= !refund ? "selected" : "" %>>Settlement sweep</option>
+        <option value="refund" <%= refund ? "selected" : "" %>>Refund</option>
+      </select>
+    </div>
+    <div class="col-sm-auto"><button class="btn btn-sm btn-outline-secondary" type="submit">Filter</button></div>
+  </form>
+
+  <% if (candidates.length) { %>
+    <form method="post" action="/admin/sweeps" class="mb-4">
+      <input type="hidden" name="csrf" value="<%= csrf %>">
+      <input type="hidden" name="chain" value="<%= chain %>">
+      <input type="hidden" name="mode" value="<%= refund ? "refund" : "settlement" %>">
+      <div class="table-responsive">
+        <table class="table table-sm table-striped table-bordered align-middle bg-white">
+          <thead><tr><th scope="col">Select</th><th scope="col">Invoice</th><th scope="col">Deposit</th><th scope="col">Paid</th><th scope="col">Status</th></tr></thead>
+          <tbody>
+            <% for (const invoice of candidates) { %>
+              <tr>
+                <td><input class="form-check-input" type="checkbox" name="invoiceIds" value="<%= invoice.id %>"
+                  aria-label="Select invoice <%= invoice.id %>" <%= selected.includes(invoice.id) ? "checked" : "" %>></td>
+                <td><a class="font-monospace" href="/admin/invoices/<%= invoice.id %>"><%= invoice.id %></a></td>
+                <td><code class="text-dark address"><%= invoice.address %></code></td>
+                <td><%= formatAmount(invoice.paid, invoice.decimals) %> <%= invoice.assetSymbol %></td>
+                <td><span class="badge <%= badgeClass(invoice.status) %>"><%= invoice.status %></span></td>
+              </tr>
+            <% } %>
+          </tbody>
+        </table>
+      </div>
+      <label class="form-label" for="destination"><%= refund ? "Refund address" : "Treasury address" %></label>
+      <div class="input-group">
+        <input class="form-control font-monospace" id="destination" name="destination" value="<%= destination %>" maxlength="256" autocomplete="off" required>
+        <button class="btn btn-primary" type="submit">Build unsigned transaction</button>
+      </div>
+    </form>
+  <% } else { %>
+    <p class="text-muted">No eligible invoices for this chain and transaction type.</p>
+  <% } %>
+
+  <% if (result !== null) { %>
+    <section class="card">
+      <div class="card-body">
+        <h2 class="h5" id="sweep-result-heading">Unsigned transaction data</h2>
+        <textarea class="form-control font-monospace" rows="10" readonly aria-labelledby="sweep-result-heading" spellcheck="false"><%= prettyJson(result) %></textarea>
+      </div>
+    </section>
+  <% } %>
+</main>
+<%- include("partials/footer") %>
