@@ -1,60 +1,63 @@
 import pino from 'pino';
 import { CardanoAdapter } from './chains/cardano';
+import { readConfig } from './config';
 import { connect } from './db/connection';
+import { configureSlots } from './db/reservations';
 import { background } from './services/background';
 import { pollChain } from './services/chain-watcher';
-import { createInvoice } from './services/invoices';
+import { gateway, Network } from './services/gateway';
 import { dispatchWebhook } from './services/webhook-dispatcher';
+import { createApp } from './web';
 
 const log = pino({ name: 'txgate' });
 
-function setting(name: string): string {
-  const value = process.env[name];
-  if (!value) throw new Error(name + ' is required');
-  return value;
-}
-
 async function main(): Promise<void> {
-  const adapterOptions = {
-    accountXpub: setting('CARDANO_ACCOUNT_XPUB'),
-    networkId: Number(process.env.CARDANO_NETWORK_ID ?? 0),
-    startBlock: Number(process.env.CARDANO_START_BLOCK ?? 1)
-  };
-  const source = connect(setting('DB_SYNC_DATABASE_URL'), true);
-  const db = connect(setting('DATABASE_URL'));
-  const adapter = new CardanoAdapter(source, adapterOptions);
-  const stop = async () => {
-    await Promise.all([db.destroy(), source.destroy()]);
-  };
-  const [command, amount] = process.argv.slice(2);
-  if (command === 'invoice') {
-    try {
-      const asset = { chain: 'cardano', id: 'ADA', symbol: 'ADA', decimals: 6 };
-      const invoice = await createInvoice(db, adapter, asset, {
-        chain: 'cardano', assetId: 'ADA', amount
-      }, Number(process.env.CARDANO_CONFIRMATIONS ?? 15));
-      console.log(JSON.stringify(invoice));
-    } finally {
-      await stop();
+  const config = readConfig();
+  const db = connect(config.databaseUrl);
+  const source = connect(config.dbSyncUrl, true);
+  const networks: Network[] = [];
+  const settings: Record<string, string> = { 'Webhooks': config.webhook ? 'enabled' : 'disabled' };
+  const stops: (() => Promise<void>)[] = [];
+  try {
+    await configureSlots(db, config.supply);
+    const adapter = new CardanoAdapter(source, config.cardano);
+    networks.push({ adapter, assets: config.cardanoAssets, confirmations: config.cardanoConfirmations });
+    settings['Cardano account xpub'] = config.cardano.accountXpub;
+    settings['Cardano network'] = config.cardano.networkId === 1 ? 'mainnet' : 'testnet';
+    settings['Merchant API key'] = 'configured (ending ' + config.apiKey.slice(-4) + ')';
+    const services = gateway(db, networks, settings, Boolean(config.webhook));
+    const app = createApp({ ...config, services });
+    const server = app.listen(config.port, config.host);
+    await new Promise<void>((resolve, reject) => {
+      server.once('listening', resolve).once('error', reject);
+    });
+    log.info({ port: config.port, chains: networks.map((network) => network.adapter.chain) }, 'listening');
+    for (const { adapter } of networks) {
+      stops.push(background(() => pollChain(db, adapter, Boolean(config.webhook)), config.intervalMs,
+        (err) => log.error({ err, chain: adapter.chain }, 'chain poll failed')));
     }
-    return;
+    const webhook = config.webhook;
+    if (webhook) {
+      stops.push(background(() => dispatchWebhook(db, webhook), config.intervalMs,
+        (err) => log.error({ err }, 'webhook queue failed')));
+    }
+    const shutdown = async () => {
+      await Promise.all([
+        new Promise<void>((resolve) => server.close(() => resolve())),
+        ...stops.map((stop) => stop())
+      ]);
+      await Promise.all([db.destroy(), source.destroy(), app.locals.closeSessionStore()]);
+    };
+    for (const signal of ['SIGINT', 'SIGTERM'] as const) {
+      process.once(signal, () => void shutdown().catch((err) => {
+        log.error({ err }, 'shutdown failed');
+        process.exitCode = 1;
+      }));
+    }
+  } catch (error) {
+    await Promise.all([db.destroy(), source.destroy()]);
+    throw error;
   }
-  const url = process.env.WEBHOOK_URL;
-  const secret = process.env.WEBHOOK_SECRET;
-  const stops = [
-    background(() => pollChain(db, adapter, Boolean(url && secret)), 2000,
-      (err) => log.error({ err }, 'chain poll failed'))
-  ];
-  if (url && secret) {
-    stops.push(background(() => dispatchWebhook(db, { url, secret }), 2000,
-      (err) => log.error({ err }, 'webhook queue failed')));
-  }
-  const shutdown = async () => {
-    await Promise.all(stops.map((close) => close()));
-    await stop();
-  };
-  process.once('SIGTERM', () => void shutdown());
-  process.once('SIGINT', () => void shutdown());
 }
 
 main().catch((err) => {
