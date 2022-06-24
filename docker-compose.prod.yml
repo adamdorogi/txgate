@@ -1,0 +1,34 @@
+version: "2.4"
+
+services:
+  txgate:
+    build: .
+    init: true
+    env_file: ${TXGATE_ENV_FILE:-.env}
+    environment:
+      DATABASE_URL: ${TXGATE_DATABASE_URL:?set TXGATE_DATABASE_URL}
+    ports: ["127.0.0.1:${TXGATE_HOST_PORT:-3000}:3000"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:3000/healthz',r=>{r.resume();if(r.statusCode!==200)process.exitCode=1}).on('error',()=>{process.exitCode=1})"]
+      interval: 10s
+      timeout: 4s
+      retries: 5
+  postgres:
+    image: postgres:14-alpine
+    environment:
+      POSTGRES_DB: txgate
+      POSTGRES_USER: txgate
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+    volumes: [postgres-data:/var/lib/postgresql/data]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U txgate -d txgate"]
+      interval: 5s
+      timeout: 4s
+      retries: 10
+volumes:
+  postgres-data:
