@@ -3,7 +3,7 @@ import {
   ScriptHash, Transaction, TransactionBody, TransactionHash, TransactionInput, TransactionInputs,
   TransactionOutput, TransactionOutputs, TransactionWitnessSet, Value, Vkey, Vkeywitness, Vkeywitnesses,
 } from '@emurgo/cardano-serialization-lib-nodejs';
-import { alonzoMinLovelace } from './min-ada';
+import { alonzoMinLovelace, babbageMinLovelace } from './min-ada';
 
 export interface CardanoUtxo {
   txId: string;
@@ -15,6 +15,8 @@ export interface CardanoUtxo {
 }
 
 export interface CardanoSweepOptions {
+  era?: 'alonzo' | 'babbage';
+  coinsPerUtxoByte?: bigint;
   coinsPerUtxoWord?: bigint;
   feePerByte?: bigint;
   feeConstant?: bigint;
@@ -130,7 +132,10 @@ function buildTransaction(
   options: CardanoSweepOptions,
   track: Track,
 ): UnsignedTransaction {
-  const minimum = (output: TransactionOutput) => alonzoMinLovelace(output, options.coinsPerUtxoWord);
+  const era = options.era ?? 'babbage';
+  const minimum = era === 'alonzo'
+    ? (output: TransactionOutput) => alonzoMinLovelace(output, options.coinsPerUtxoWord)
+    : (output: TransactionOutput) => babbageMinLovelace(output, options.coinsPerUtxoByte);
   const groups = splitAssets(aggregateAssets(utxos), options.maxValueSize ?? 5000);
   const available = utxos.reduce((sum, utxo) => sum + utxo.lovelace, 0n);
   const feePerByte = options.feePerByte ?? 44n;
@@ -175,13 +180,17 @@ function buildTransaction(
       continue;
     }
 
-    const bodyHex = Buffer.from(body.to_bytes()).toString('hex');
+    const unsigned = track(Transaction.new(body, track(TransactionWitnessSet.new()), undefined));
     const witnesses = [...addresses].map(([address, index]) => ({ address, path: `m/1852'/1815'/0'/0/${index ?? 'INDEX'}` }));
     const keys = [...addresses.values()].map(index => `--signing-key-file payment-${index ?? 'INDEX'}.skey`);
     const network = destination.network_id() === 1 ? '--mainnet' : `--testnet-magic ${options.testnetMagic ?? 'NETWORK_MAGIC'}`;
     return {
-      bodyHex,
-      textEnvelope: { type: 'TxBodyAlonzo', description: '', cborHex: `86${bodyHex}9fff8080f5f6` },
+      bodyHex: Buffer.from(body.to_bytes()).toString('hex'),
+      textEnvelope: {
+        type: `Unwitnessed Tx ${era === 'alonzo' ? 'Alonzo' : 'Babbage'}Era`,
+        description: 'Ledger Cddl Format',
+        cborHex: Buffer.from(unsigned.to_bytes()).toString('hex'),
+      },
       inputs: utxos.map(utxo => `${utxo.txId}#${utxo.outputIndex}`),
       witnesses,
       fee: fee.toString(),

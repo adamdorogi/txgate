@@ -14,6 +14,8 @@ const schema = Joi.object({
   CARDANO_NETWORK_ID: Joi.number().valid(0, 1).default(0),
   CARDANO_START_BLOCK: Joi.number().integer().min(-1).default(-1),
   CARDANO_CONFIRMATIONS: positiveInteger(64).default(15),
+  CARDANO_ERA: Joi.string().valid('alonzo', 'babbage').default('babbage'),
+  CARDANO_COINS_PER_UTXO_BYTE: units.default('4310'),
   CARDANO_COINS_PER_UTXO_WORD: units.default('34482'),
   CARDANO_FEE_PER_BYTE: units.default('44'),
   CARDANO_FEE_CONSTANT: units.default('155381'),
@@ -40,6 +42,8 @@ export function readConfig(env: NodeJS.ProcessEnv = process.env) {
     networkId: value.CARDANO_NETWORK_ID,
     startBlock: value.CARDANO_START_BLOCK,
     sweep: {
+      era: value.CARDANO_ERA,
+      coinsPerUtxoByte: BigInt(value.CARDANO_COINS_PER_UTXO_BYTE),
       coinsPerUtxoWord: BigInt(value.CARDANO_COINS_PER_UTXO_WORD),
       feePerByte: BigInt(value.CARDANO_FEE_PER_BYTE),
       feeConstant: BigInt(value.CARDANO_FEE_CONSTANT),

@@ -1,5 +1,9 @@
 import type { TransactionOutput } from '@emurgo/cardano-serialization-lib-nodejs';
 
+export function babbageMinLovelace(output: TransactionOutput, coinsPerUtxoByte = 4310n): bigint {
+  return (160n + BigInt(output.to_bytes().length)) * coinsPerUtxoByte;
+}
+
 export function alonzoMinLovelace(output: TransactionOutput, coinsPerUtxoWord = 34482n): bigint {
   const value = output.amount();
   const multi = value.multiasset();
