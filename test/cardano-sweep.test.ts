@@ -1,4 +1,4 @@
-import { TransactionBody } from '@emurgo/cardano-serialization-lib-nodejs';
+import { Transaction, TransactionBody } from '@emurgo/cardano-serialization-lib-nodejs';
 import { expect } from 'chai';
 import { deriveAddress } from '../src/chains/cardano/derivation';
 import { buildCardanoSweep, CardanoUtxo } from '../src/chains/cardano/sweeper';
@@ -21,10 +21,11 @@ function utxo(index: number, assets: Record<string, string>): CardanoUtxo {
 describe('Cardano unsigned sweep', () => {
   it('preserves native assets and allocates the exact fee using witness size', () => {
     const inputs = [utxo(1, { [`${policy}.deadbeef`]: '11' }), utxo(2, { [`${policy}.deadbeef`]: '32' })];
-    const result = buildCardanoSweep(inputs, destination, 0);
+    const result = buildCardanoSweep(inputs, destination, 0, { era: 'alonzo' });
     expect(result.transactions).to.have.length(1);
     const transaction = result.transactions[0];
     const body = TransactionBody.from_bytes(Buffer.from(transaction.bodyHex, 'hex'));
+    const envelope = Transaction.from_bytes(Buffer.from(transaction.textEnvelope.cborHex, 'hex'));
     const output = body.outputs().get(0);
     const value = output.amount();
     const multi = value.multiasset()!;
@@ -33,8 +34,7 @@ describe('Cardano unsigned sweep', () => {
     expect(output.address().to_bech32()).to.equal(destination);
     expect(value.coin().to_str()).to.equal((10000000n - BigInt(transaction.fee)).toString());
     expect(BigInt(transaction.fee)).to.equal(155381n + 44n * BigInt(transaction.signedSize));
-    expect(transaction.textEnvelope.type).to.equal('TxBodyAlonzo');
-    expect(transaction.textEnvelope.cborHex).to.equal(`86${transaction.bodyHex}9fff8080f5f6`);
+    expect(envelope.witness_set().vkeys()).to.equal(undefined);
     expect(transaction.witnesses.map(witness => witness.path)).to.deep.equal(["m/1852'/1815'/0'/0/1", "m/1852'/1815'/0'/0/2"]);
   });
 
