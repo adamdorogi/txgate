@@ -1,6 +1,6 @@
 import { randomUUID } from 'crypto';
 import type { Knex } from 'knex';
-import type { CardanoChain } from '../chains/cardano/types';
+import type { ChainAdapter } from '../chains/types';
 import { lockChain } from '../db/chain-history';
 import { invoiceRecord, InvoiceRow } from '../db/invoice-record';
 import { transferRecord } from '../db/observations';
@@ -10,7 +10,7 @@ import { Asset, CreateInvoice, Invoice, InvoiceDetail, InvoiceFilter, TxgateErro
 
 export async function createInvoice(
   db: Knex,
-  adapter: CardanoChain,
+  adapter: ChainAdapter,
   asset: Asset,
   input: CreateInvoice,
   target: number

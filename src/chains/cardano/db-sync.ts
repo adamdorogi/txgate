@@ -1,5 +1,5 @@
 import type { Knex } from 'knex';
-import type { ChainBlock, ChainTransfer, SweepItem, WatchedTarget } from './types';
+import type { ChainBlock, ChainTransfer, SweepItem, WatchedTarget } from '../types';
 import type { CardanoUtxo } from './sweeper';
 
 type Connection = Knex | Knex.Transaction;

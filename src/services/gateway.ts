@@ -1,5 +1,5 @@
 import type { Knex } from 'knex';
-import type { CardanoChain } from '../chains/cardano/types';
+import type { ChainAdapter } from '../chains/types';
 import type { ChainCursor } from '../db/chain-history';
 import type { WebServices } from '../web/types';
 import { createInvoice, getInvoice, invoiceDetail, listInvoices } from './invoices';
@@ -7,7 +7,7 @@ import { buildSweep, listSweepCandidates } from './sweeps';
 import { Asset, ChainHealth, TxgateError } from './types';
 
 export interface Network {
-  adapter: CardanoChain;
+  adapter: ChainAdapter;
   assets: Asset[];
   confirmations: number;
 }

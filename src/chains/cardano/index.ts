@@ -1,5 +1,5 @@
 import type { Knex } from 'knex';
-import type { CardanoChain, SweepRequest, WatchedTarget } from './types';
+import type { ChainAdapter, SweepRequest, WatchedTarget } from '../types';
 import { DbSync } from './db-sync';
 import { deriveAddress } from './derivation';
 import { buildCardanoSweep, CardanoSweepOptions } from './sweeper';
@@ -12,7 +12,7 @@ export interface CardanoOptions {
   sweep?: CardanoSweepOptions;
 }
 
-export class CardanoAdapter implements CardanoChain {
+export class CardanoAdapter implements ChainAdapter {
   readonly chain = 'cardano';
   readonly tipFloor: number;
   private readonly source: DbSync;

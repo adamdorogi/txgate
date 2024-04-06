@@ -1,5 +1,5 @@
 import type { Knex } from 'knex';
-import type { CardanoChain, ChainBlock } from '../chains/cardano/types';
+import type { ChainAdapter, ChainBlock } from '../chains/types';
 
 export interface ChainCursor {
   chain: string;
@@ -20,7 +20,7 @@ export async function lockChain(db: Knex.Transaction, chain: string): Promise<Ch
   return db('chain_state').where({ chain }).forUpdate().first();
 }
 
-export async function commonAncestor(db: Knex.Transaction, adapter: CardanoChain, tip: number): Promise<BlockRow | undefined> {
+export async function commonAncestor(db: Knex.Transaction, adapter: ChainAdapter, tip: number): Promise<BlockRow | undefined> {
   const recent: BlockRow[] = await db('chain_tips').where({ chain: adapter.chain })
     .where('block_no', '<=', tip).orderBy('block_no', 'desc').limit(64);
   for (const row of recent) {

@@ -34,7 +34,7 @@ export interface SweepRequest {
   refund: boolean;
 }
 
-export interface CardanoChain {
+export interface ChainAdapter {
   readonly chain: string;
   readonly tipFloor: number;
   deriveDepositTarget(invoiceId: string, index: number): string;

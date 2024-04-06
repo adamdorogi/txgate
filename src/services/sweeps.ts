@@ -1,5 +1,5 @@
 import type { Knex } from 'knex';
-import type { CardanoChain, SweepItem } from '../chains/cardano/types';
+import type { ChainAdapter, SweepItem } from '../chains/types';
 import { lockChain } from '../db/chain-history';
 import { invoiceRecord, InvoiceRow } from '../db/invoice-record';
 import { canonicalTransfers } from '../db/observations';
@@ -15,7 +15,7 @@ export async function listSweepCandidates(db: Knex, chain: string, refund: boole
   return (await query).map(invoiceRecord);
 }
 
-export async function buildSweep(db: Knex, adapter: CardanoChain, input: SweepInput): Promise<unknown> {
+export async function buildSweep(db: Knex, adapter: ChainAdapter, input: SweepInput): Promise<unknown> {
   const ids = [...new Set(input.invoiceIds)];
   if (!ids.length || ids.length > 200) throw new TxgateError(400, 'Select between 1 and 200 invoices');
   return db.transaction(async (trx) => {

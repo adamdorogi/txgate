@@ -1,5 +1,5 @@
 import type { Knex } from 'knex';
-import type { ChainTransfer } from '../chains/cardano/types';
+import type { ChainTransfer } from '../chains/types';
 
 export interface TransferRow {
   invoice_id: string;

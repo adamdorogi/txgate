@@ -1,5 +1,5 @@
 import type { Knex } from 'knex';
-import type { CardanoChain, ChainBlock, ChainTransfer } from '../chains/cardano/types';
+import type { ChainAdapter, ChainBlock, ChainTransfer } from '../chains/types';
 import { commonAncestor, lockChain, rewindChain, saveBlocks } from '../db/chain-history';
 import { recordTransfers } from '../db/observations';
 import { reconcileInvoices } from './reconcile-invoices';
@@ -27,7 +27,7 @@ function validateBatch(
   }
 }
 
-export async function pollChain(db: Knex, adapter: CardanoChain, webhooks = false): Promise<boolean> {
+export async function pollChain(db: Knex, adapter: ChainAdapter, webhooks = false): Promise<boolean> {
   return db.transaction(async (trx) => {
     const cursor = await lockChain(trx, adapter.chain);
     const tip = await adapter.getTip();
