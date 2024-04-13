@@ -45,6 +45,16 @@ contract SweepFactory {
         address token;
     }
 
+    struct Refund {
+        bytes32 invoiceId;
+        bytes32 transferId;
+        address token;
+        address recipient;
+        uint256 amount;
+    }
+
+    mapping(bytes32 => bool) public refunded;
+
     modifier onlyTreasury(address treasury) {
         if (msg.sender != treasury) revert Unauthorized();
         _;
@@ -75,6 +85,17 @@ contract SweepFactory {
     function batchSweep(address treasury, Sweep[] calldata items) external onlyTreasury(treasury) {
         for (uint256 i; i < items.length; ++i) {
             getSweeper(treasury, items[i].invoiceId).send(items[i].token, treasury, 0, true);
+        }
+    }
+
+    function batchRefund(address treasury, Refund[] calldata items) external onlyTreasury(treasury) {
+        for (uint256 i; i < items.length; ++i) {
+            Refund calldata item = items[i];
+            if (item.amount == 0 || item.recipient == address(0)) revert InvalidTransfer();
+            bytes32 key = keccak256(abi.encode(salt(treasury, item.invoiceId), item.transferId));
+            if (refunded[key]) revert InvalidTransfer();
+            refunded[key] = true;
+            getSweeper(treasury, item.invoiceId).send(item.token, item.recipient, item.amount, false);
         }
     }
 
