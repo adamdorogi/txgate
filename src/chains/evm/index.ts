@@ -99,12 +99,15 @@ export class EvmAdapter implements ChainAdapter {
     }
     await this.verifyChainId();
 
+    const nativeTargets = new Map<string, WatchedTarget>();
     const tokenTargets = new Map<string, WatchedTarget>();
     const tokenRecipients = new Set<Address>();
     const activeTokens = new Set<Address>();
     for (const target of targets) {
       const address = getAddress(target.address);
-      if (target.assetId !== this.nativeAssetId) {
+      if (target.assetId === this.nativeAssetId) {
+        nativeTargets.set(address, target);
+      } else {
         const token = getAddress(target.assetId);
         if (!this.tokens.includes(token)) continue;
         tokenTargets.set(`${address}:${token}`, target);
@@ -119,13 +122,26 @@ export class EvmAdapter implements ChainAdapter {
       const end = Math.min(start + blockBatchSize - 1, to);
       const heights = Array.from({ length: end - start + 1 }, (_, index) => start + index);
       const rawBlocks = await Promise.all(heights.map(height => this.client.getBlock({
-        blockNumber: BigInt(height), includeTransactions: false,
+        blockNumber: BigInt(height), includeTransactions: nativeTargets.size > 0,
       })));
       for (const rawBlock of rawBlocks) {
         const block = toChainBlock(rawBlock);
         const predecessor = blocks[blocks.length - 1];
         if (predecessor && block.parentHash !== predecessor.hash) throw new Error('EVM parent changed during block scan');
         blocks.push(block);
+
+        for (const transaction of rawBlock.transactions) {
+          if (typeof transaction === 'string' || !transaction.to || transaction.value === 0n) continue;
+          const target = nativeTargets.get(getAddress(transaction.to));
+          if (!target) continue;
+          const receipt = await this.client.getTransactionReceipt({ hash: transaction.hash });
+          if (receipt.blockHash !== block.hash) throw new Error('EVM receipt changed during block scan');
+          if (receipt.status !== 'success') continue;
+          transfers.push({
+            invoiceId: target.invoiceId, txId: transaction.hash, outputIndex: -1, blockHeight: block.height,
+            blockHash: block.hash, time: block.time, amount: transaction.value, detail: { sender: getAddress(transaction.from) },
+          });
+        }
       }
     }
 
