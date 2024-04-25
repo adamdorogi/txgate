@@ -129,4 +129,52 @@ describe('SweepFactory', () => {
     }));
     expect(await balanceOf(treasury)).to.equal(6n);
   });
+
+  it('reads direct ETH and ERC-20 payments and detects a replaced tip', async () => {
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = async (input, init) => {
+      const request = new Request(input, init);
+      const payload = await request.json() as Parameters<typeof network.provider.request>[0] & { id: number };
+      const result = await network.provider.request(payload);
+      return Response.json({ jsonrpc: '2.0', id: payload.id, result });
+    };
+    try {
+      const adapter = new EvmAdapter({
+        chain: 'ethereum', chainId: 31337, treasury, initCodeHash, factoryAddress: factory,
+        tokenAddresses: [token], rpcUrl: 'http://127.0.0.1:8545', logChunkSize: 1,
+      });
+      await adapter.verifyDeployment();
+      await mint(payer, 70n);
+      const initial = await adapter.getTip();
+      const snapshot = await network.provider.send('evm_snapshot');
+      const ethAddress = adapter.deriveDepositTarget('eth', 0);
+      const tokenAddress = adapter.deriveDepositTarget('token', 0);
+      await mine(await wallet.sendTransaction({ chain: null, account: payer, to: ethAddress, value: 7n }));
+      await mine(await wallet.writeContract({
+        chain: null, account: payer, address: token, abi: tokenAbi, functionName: 'transfer', args: [tokenAddress, 70n],
+      }));
+      const tip = await adapter.getTip();
+      const nativeTarget = { invoiceId: 'eth', address: ethAddress, assetId: 'ETH' };
+      const tokenTarget = { invoiceId: 'token', address: tokenAddress, assetId: token.toLowerCase() };
+      const { blocks, transfers } = await adapter.pollBlocks(initial.height + 1, tip.height, [nativeTarget, tokenTarget]);
+      expect(blocks.map(block => block.parentHash)).to.deep.equal([initial.hash, blocks[0].hash]);
+      expect(transfers.map(row => [row.invoiceId, row.amount, row.outputIndex, row.detail?.sender])).to.deep.equal([
+        ['eth', 7n, -1, getAddress(payer)], ['token', 70n, 0, getAddress(payer)],
+      ]);
+      const items = transfers.map(row => ({
+        ...(row.invoiceId === 'eth' ? nativeTarget : tokenTarget), ...row, derivationIndex: 0,
+      }));
+      const sweep = await adapter.buildUnsignedSweep({ destination: treasury, refund: false, items });
+      expect(sweep.to).to.equal(factory);
+      expect(sweep.chainId).to.equal(31337);
+      expect(BigInt(sweep.gas) > 0n).to.equal(true);
+
+      await network.provider.send('evm_revert', [snapshot]);
+      await network.provider.send('evm_mine');
+      await network.provider.send('evm_mine');
+      expect((await adapter.verifyChainTip(tip.height))?.hash).to.not.equal(tip.hash);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
 });
