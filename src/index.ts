@@ -1,5 +1,6 @@
 import pino from 'pino';
 import { CardanoAdapter } from './chains/cardano';
+import { EvmAdapter } from './chains/evm';
 import { readConfig } from './config';
 import { connect } from './db/connection';
 import { configureSlots } from './db/reservations';
@@ -14,16 +15,25 @@ const log = pino({ name: 'txgate' });
 async function main(): Promise<void> {
   const config = readConfig();
   const db = connect(config.databaseUrl);
-  const source = connect(config.dbSyncUrl, true);
+  const source = config.dbSyncUrl ? connect(config.dbSyncUrl, true) : undefined;
   const networks: Network[] = [];
   const settings: Record<string, string> = { 'Webhooks': config.webhook ? 'enabled' : 'disabled' };
   const stops: (() => Promise<void>)[] = [];
   try {
     await configureSlots(db, config.supply);
-    const adapter = new CardanoAdapter(source, config.cardano);
-    networks.push({ adapter, assets: config.cardanoAssets, confirmations: config.cardanoConfirmations });
-    settings['Cardano account xpub'] = config.cardano.accountXpub;
-    settings['Cardano network'] = config.cardano.networkId === 1 ? 'mainnet' : 'testnet';
+    if (source && config.cardano) {
+      const adapter = new CardanoAdapter(source, config.cardano);
+      networks.push({ adapter, assets: config.cardanoAssets, confirmations: config.cardanoConfirmations });
+      settings['Cardano account xpub'] = config.cardano.accountXpub;
+      settings['Cardano network'] = config.cardano.networkId === 1 ? 'mainnet' : 'testnet';
+    }
+    for (const item of config.evm) {
+      const adapter = new EvmAdapter(item);
+      await adapter.verifyDeployment();
+      networks.push({ adapter, assets: item.assets, confirmations: item.confirmations });
+      settings[item.chain + ' factory'] = item.factoryAddress;
+      settings[item.chain + ' treasury'] = item.treasury;
+    }
     settings['Merchant API key'] = 'configured (ending ' + config.apiKey.slice(-4) + ')';
     const services = gateway(db, networks, settings, Boolean(config.webhook));
     const app = createApp({ ...config, services });
@@ -46,7 +56,7 @@ async function main(): Promise<void> {
         new Promise<void>((resolve) => server.close(() => resolve())),
         ...stops.map((stop) => stop())
       ]);
-      await Promise.all([db.destroy(), source.destroy(), app.locals.closeSessionStore()]);
+      await Promise.all([db.destroy(), source?.destroy(), app.locals.closeSessionStore()]);
     };
     for (const signal of ['SIGINT', 'SIGTERM'] as const) {
       process.once(signal, () => void shutdown().catch((err) => {
@@ -55,7 +65,7 @@ async function main(): Promise<void> {
       }));
     }
   } catch (error) {
-    await Promise.all([db.destroy(), source.destroy()]);
+    await Promise.all([db.destroy(), source?.destroy()]);
     throw error;
   }
 }
