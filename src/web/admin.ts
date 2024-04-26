@@ -154,7 +154,7 @@ export function createAdmin(services: WebServices, adminPassword: string, secure
     const destination = asString(req.body.destination).trim();
     const refund = req.body.mode === "refund";
     if (!chains.includes(chain)) throw new TxgateError(400, "Unknown chain");
-    if (!destination || destination.length > 256) {
+    if ((chain === "cardano" && !destination) || destination.length > 256) {
       throw new TxgateError(400, "Enter a destination address");
     }
     const ids = req.body.invoiceIds;

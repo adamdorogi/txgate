@@ -43,11 +43,16 @@
           </tbody>
         </table>
       </div>
-      <label class="form-label" for="destination"><%= refund ? "Refund address" : "Treasury address" %></label>
-      <div class="input-group">
-        <input class="form-control font-monospace" id="destination" name="destination" value="<%= destination %>" maxlength="256" autocomplete="off" required>
+      <% if (chain === "cardano") { %>
+        <label class="form-label" for="destination"><%= refund ? "Refund address" : "Treasury address" %></label>
+        <div class="input-group">
+          <input class="form-control font-monospace" id="destination" name="destination" value="<%= destination %>" maxlength="256" autocomplete="off" required>
+          <button class="btn btn-primary" type="submit">Build unsigned transaction</button>
+        </div>
+      <% } else { %>
+        <p class="form-text"><%= refund ? "Refunds return to the original senders." : "Funds go to the configured treasury." %></p>
         <button class="btn btn-primary" type="submit">Build unsigned transaction</button>
-      </div>
+      <% } %>
     </form>
   <% } else { %>
     <p class="text-muted">No eligible invoices for this chain and transaction type.</p>
