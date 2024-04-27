@@ -29,6 +29,12 @@ services:
       interval: 2s
       timeout: 3s
       retries: 20
+  evm:
+    build:
+      context: .
+      target: dev
+    command: ["npm", "run", "dev:evm"]
+    ports: ["127.0.0.1:8545:8545"]
 volumes:
   appdb:
   dbsync:
