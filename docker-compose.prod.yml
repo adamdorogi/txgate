@@ -1,5 +1,3 @@
-version: "2.4"
-
 services:
   txgate:
     build: .
@@ -13,12 +11,12 @@ services:
         condition: service_healthy
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:3000/healthz',r=>{r.resume();if(r.statusCode!==200)process.exitCode=1}).on('error',()=>{process.exitCode=1})"]
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/healthz').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
       interval: 10s
       timeout: 4s
       retries: 5
   postgres:
-    image: postgres:14-alpine
+    image: postgres:16-alpine
     environment:
       POSTGRES_DB: txgate
       POSTGRES_USER: txgate
