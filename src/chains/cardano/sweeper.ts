@@ -15,7 +15,7 @@ export interface CardanoUtxo {
 }
 
 export interface CardanoSweepOptions {
-  era?: 'alonzo' | 'babbage';
+  era?: 'alonzo' | 'babbage' | 'conway';
   coinsPerUtxoByte?: bigint;
   coinsPerUtxoWord?: bigint;
   feePerByte?: bigint;
@@ -40,6 +40,7 @@ type Track = <T extends Disposable>(value: T) => T;
 type Asset = [string, bigint];
 
 const maxQuantity = (1n << 64n) - 1n;
+const eraNames = { alonzo: 'Alonzo', babbage: 'Babbage', conway: 'Conway' };
 
 function withWasm<T>(build: (track: Track) => T): T {
   const pending: Disposable[] = [];
@@ -173,7 +174,9 @@ function buildTransaction(
       outputs.add(txOut);
     }
     const body = track(TransactionBody.new(inputs, outputs, amount(fee, track)));
-    const signedSize = track(Transaction.new(body, placeholders, undefined)).to_bytes().length;
+    // Conway CLI encodes vkey witnesses with the three-byte CBOR set tag.
+    const witnessTagSize = era === 'conway' ? 3 : 0;
+    const signedSize = track(Transaction.new(body, placeholders, undefined)).to_bytes().length + witnessTagSize;
     const nextFee = feeConstant + feePerByte * BigInt(signedSize);
     if (nextFee > fee) {
       fee = nextFee;
@@ -184,10 +187,11 @@ function buildTransaction(
     const witnesses = [...addresses].map(([address, index]) => ({ address, path: `m/1852'/1815'/0'/0/${index ?? 'INDEX'}` }));
     const keys = [...addresses.values()].map(index => `--signing-key-file payment-${index ?? 'INDEX'}.skey`);
     const network = destination.network_id() === 1 ? '--mainnet' : `--testnet-magic ${options.testnetMagic ?? 'NETWORK_MAGIC'}`;
+    const cli = era === 'conway' ? 'cardano-cli conway' : 'cardano-cli';
     return {
       bodyHex: Buffer.from(body.to_bytes()).toString('hex'),
       textEnvelope: {
-        type: `Unwitnessed Tx ${era === 'alonzo' ? 'Alonzo' : 'Babbage'}Era`,
+        type: `Unwitnessed Tx ${eraNames[era]}Era`,
         description: 'Ledger Cddl Format',
         cborHex: Buffer.from(unsigned.to_bytes()).toString('hex'),
       },
@@ -195,7 +199,7 @@ function buildTransaction(
       witnesses,
       fee: fee.toString(),
       signedSize,
-      signingCommand: ['cardano-cli transaction sign --tx-body-file sweep.raw', ...keys, network, '--out-file sweep.signed'].join(' '),
+      signingCommand: [`${cli} transaction sign --tx-body-file sweep.raw`, ...keys, network, '--out-file sweep.signed'].join(' '),
     };
   }
 }

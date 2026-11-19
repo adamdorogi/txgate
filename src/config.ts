@@ -15,7 +15,7 @@ const schema = Joi.object({
   CARDANO_NETWORK_ID: Joi.number().valid(0, 1).default(0),
   CARDANO_START_BLOCK: Joi.number().integer().min(-1).default(-1),
   CARDANO_CONFIRMATIONS: positiveInteger(64).default(15),
-  CARDANO_ERA: Joi.string().valid('alonzo', 'babbage').default('babbage'),
+  CARDANO_ERA: Joi.string().valid('alonzo', 'babbage', 'conway').default('conway'),
   CARDANO_COINS_PER_UTXO_BYTE: units.default('4310'),
   CARDANO_FEE_PER_BYTE: units.default('44'),
   CARDANO_FEE_CONSTANT: units.default('155381'),

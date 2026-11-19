@@ -43,7 +43,7 @@ export function evmSettings(env: NodeJS.ProcessEnv): EvmSettings[] {
     .map(({ tokens, ...options }) => {
       const id = networks[options.chain];
       if (options.chainId !== undefined && options.chainId !== id) throw new Error('EVM chain ID does not match chain name');
-      const nativeAssetId = options.chain === 'polygon' ? 'MATIC' : 'ETH';
+      const nativeAssetId = options.chain === 'polygon' ? 'POL' : 'ETH';
       const assets = configuredAssets(options.chain, tokens, /^0x[0-9a-fA-F]{40}$/, {
         id: nativeAssetId, symbol: nativeAssetId, decimals: 18
       });
