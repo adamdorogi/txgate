@@ -15,6 +15,8 @@ REORGED. Totals, confirmations and webhook entries commit together.
 
 ## local dev (simulated chains)
 
+Use Node 22 and Compose v2.
+
 ```sh
 docker compose up -d
 npm install
@@ -69,7 +71,7 @@ const valid = m && Math.abs(now - Number(m[1])) <= 300 &&
 | DB_SYNC_DATABASE_URL | Read-only db-sync URL. Omit for EVM-only use. |
 | CARDANO_ACCOUNT_XPUB | CIP-1852 Bech32 acct_xpub or 64-byte hex. |
 | CARDANO_STAKE_KEY_HASH | Optional 28-byte stake key hash. |
-| CARDANO_NETWORK_ID | 0 testnet, 1 mainnet. |
+| CARDANO_NETWORK_ID | 0 testnet, 1 mainnet. CARDANO_ERA defaults to conway. |
 | CARDANO_ASSETS | JSON [{id,symbol,decimals}], id is policy.hexname. |
 | EVM_RPC_URL | Single chain RPC. Set EVM_CHAIN and factory, treasury and init hash. |
 | EVM_NETWORKS | JSON array for multiple RPCs. See .env.example. |
@@ -85,8 +87,8 @@ const valid = m && Math.abs(now - Number(m[1])) <= 300 &&
 - Deploy each factory with npx hardhat run scripts/deploy-factory.ts --network base.
   Copy EVM_SWEEP_FACTORY_ADDRESS, EVM_TREASURY_ADDRESS and EVM_INIT_CODE_HASH into the config.
 - Use a sticky RPC, EVM_LOG_CHUNK_SIZE=1000, and chain-specific confirmation targets.
-  Native EVM payments must be direct transactions. Polygon's native asset is MATIC.
-- Run Node 20. Set fresh secrets, SECURE_COOKIES=true, POSTGRES_PASSWORD and TXGATE_DATABASE_URL.
+  Native EVM payments must be direct transactions. Polygon's native asset is POL.
+- Set fresh secrets, SECURE_COOKIES=true, POSTGRES_PASSWORD and TXGATE_DATABASE_URL.
   Run docker compose -f docker-compose.prod.yml up -d --build behind a TLS proxy.
 - Keep address derivation settings stable while invoices are live. Check protocol parameters before exporting Cardano batches.
 - Inspect exports before signing with cardano-cli, Safe or Ledger. EVM refunds use the original sender. Verify the Cardano refund address independently.
