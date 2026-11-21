@@ -1,5 +1,9 @@
 # changelog
 
+## 0.3.2
+
+Node 22 and PostgreSQL 16 images. Build and contract checks in CI.
+
 ## 0.3.0
 
 Ethereum, Arbitrum, Base and Polygon watchers, CREATE2 deposit targets, and
