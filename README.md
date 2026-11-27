@@ -1,7 +1,7 @@
 # txgate
 
 Self-hosted, non-custodial payment daemon for Cardano (ADA and native tokens
-via cardano-db-sync) and EVM (native transfers and ERC-20 via CREATE2).
+via [cardano-db-sync](https://github.com/IntersectMBO/cardano-db-sync)) and EVM (native transfers and ERC-20 via CREATE2).
 Invoices use watch-only addresses. Settlement exports unsigned CBOR or
 calldata for offline signing. The server holds no wallet signing keys.
 
